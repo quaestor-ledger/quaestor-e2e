@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "repository": "quaestor-ledger/quaestor-ledger-e2e",
+  "syncRepository": "quaestor-ledger/quaestor-ledger-sync",
+  "syncRef": "agent/den-1387-opto-sync-zed-adapter",
+  "syncPullRequest": 2,
+  "rolloutIssue": "DEN-1387",
+  "releaseGates": ["DEN-309", "DEN-363"],
+  "releaseState": "blocked-until-certified-package-published",
+  "dependency": {"package": "opto-sync/opto-sync-clients", "range": "^0.2.0"},
+  "collections": ["ledger_snapshots", "sync_checkpoints", "conflicts", "audit_metadata"],
+  "persistence": {"web": ["indexeddb"], "mobile": ["sqlite"], "backend": ["postgres", "supabase"]},
+  "writeStrategies": ["queuedOptimistic", "remoteConfirmed"],
+  "requiredScenarios": ["real-browser-indexeddb-wasm", "durable-restart", "optimistic-rebase-no-flicker", "remote-confirmed-no-premature-view", "stable-mutation-id-replay", "stale-base-conflict", "tombstone-no-resurrection", "postgres-supabase-authority", "realtime-is-wake-hint"],
+  "domainGuards": [
+    "sync never moves money or executes a financial transaction",
+    "amounts remain canonical decimal strings and server-side ledger authority remains Quaestor-owned",
+    "account, tenant, audit, role, and conflict-escalation policy stay above the shared synchronization engine"
+  ]
+}
