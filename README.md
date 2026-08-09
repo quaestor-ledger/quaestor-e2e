@@ -93,9 +93,9 @@ base URL host to `host.docker.internal` (override with `SELENIUM_BROWSER_HOST`).
 > `ERR_NAME_NOT_RESOLVED` for it. If the whole Selenium suite fails at navigation,
 > pass the gateway IP directly — find it with
 > `docker exec <grid-container> getent hosts host.docker.internal` (typically
-> `192.168.65.254`) and run with `SELENIUM_BROWSER_HOST=192.168.65.254`. In CI the
-> Grid is a service container sharing the runner's network, so
-> `SELENIUM_BROWSER_HOST=127.0.0.1` is used instead.
+> `192.168.65.254`) and run with `SELENIUM_BROWSER_HOST=192.168.65.254`. In CI,
+> the Grid service receives an explicit `host.docker.internal:host-gateway`
+> mapping and the fixture listens on the runner interface.
 
 ## Environment variables
 

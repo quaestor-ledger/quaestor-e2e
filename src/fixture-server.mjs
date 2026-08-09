@@ -65,6 +65,7 @@ export async function startFixtureServer({
 
   return {
     baseURL,
+    listenAddress: address.address,
     async close() {
       await new Promise((resolve) => server.close(resolve));
     },

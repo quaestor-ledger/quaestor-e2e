@@ -1,6 +1,6 @@
 import test from 'node:test';
 
-import { externalBaseURL } from './config.mjs';
+import { externalBaseURL, seleniumRemoteURL } from './config.mjs';
 import { startFixtureServer } from './fixture-server.mjs';
 import { scenarios } from '../scenarios/index.mjs';
 
@@ -12,8 +12,18 @@ export async function resolveTarget() {
   if (externalBaseURL) {
     return { baseURL: externalBaseURL, async close() {} };
   }
-  const fixture = await startFixtureServer();
-  return { baseURL: fixture.baseURL, close: fixture.close };
+  // A browser hosted by Selenium Grid runs outside this process's network
+  // namespace. Listen on the runner/host interface in that case, while the
+  // fixture server continues to advertise a loopback URL for local drivers.
+  // seleniumTargetURL() rewrites that advertised host for the remote browser.
+  const fixture = await startFixtureServer({
+    host: seleniumRemoteURL ? '0.0.0.0' : '127.0.0.1',
+  });
+  return {
+    baseURL: fixture.baseURL,
+    listenAddress: fixture.listenAddress,
+    close: fixture.close,
+  };
 }
 
 /**
