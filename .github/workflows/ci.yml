@@ -52,6 +52,43 @@ jobs:
           status=$?
           set -e
           echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+      - name: Summarize high and critical advisories
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('artifacts/npm-audit.json')
+          report = json.loads(path.read_text(encoding='utf-8'))
+          vulnerabilities = report.get('vulnerabilities', {})
+          for package, detail in sorted(vulnerabilities.items()):
+              severity = str(detail.get('severity', 'unknown'))
+              if severity not in {'high', 'critical'}:
+                  continue
+              titles = []
+              for source in detail.get('via', []):
+                  if isinstance(source, dict) and source.get('title'):
+                      titles.append(str(source['title']))
+                  elif isinstance(source, str):
+                      titles.append(source)
+              fix = detail.get('fixAvailable')
+              message = (
+                  f"package={package}; severity={severity}; range={detail.get('range')}; "
+                  f"direct={detail.get('isDirect')}; fixAvailable={fix}; "
+                  f"via={'; '.join(titles) or 'transitive dependency'}"
+              )
+              message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              title = f"npm audit {package}".replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f"::error title={title}::{message}")
+          metadata = report.get('metadata', {}).get('vulnerabilities', {})
+          print(
+              'npm audit counts: '
+              + ', '.join(f"{key}={metadata.get(key, 0)}" for key in ('low', 'moderate', 'high', 'critical', 'total'))
+          )
+          PY
       - name: Upload the npm audit evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
