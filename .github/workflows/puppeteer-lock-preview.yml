@@ -1,0 +1,51 @@
+name: puppeteer lock preview
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/puppeteer-lock-preview.yml
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: puppeteer-lock-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Generate the exact Puppeteer 25.1.0 lock without lifecycle scripts
+        run: npm install --package-lock-only --ignore-scripts --save-exact puppeteer@25.1.0
+      - name: Verify the generated dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm audit --audit-level=high
+          npm run test:contract
+      - name: Package generated manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cp package.json package-lock.json artifacts/
+      - name: Upload generated manifests
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: puppeteer-25.1.0-lock-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 2
