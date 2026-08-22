@@ -49,11 +49,11 @@ jobs:
           node --check tests/opto-sync-wrapper/product.e2e.test.mjs
 
   live-e2e:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_e2e }}
+    # No private token or cross-repository source is available to pull-request
+    # code. A trusted operator must explicitly dispatch the live certification.
+    if: ${{ github.event_name != 'pull_request' && inputs.live_e2e }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      SYNC_FLEET_TOKEN: ${{ secrets.SYNC_FLEET_TOKEN }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: {persist-credentials: false}
@@ -69,6 +69,8 @@ jobs:
           PY
       - name: Require private cross-repository read credentials
         shell: bash
+        env:
+          SYNC_FLEET_TOKEN: ${{ secrets.SYNC_FLEET_TOKEN }}
         run: |
           set -euo pipefail
           test -n "$SYNC_FLEET_TOKEN" || { echo 'SYNC_FLEET_TOKEN is required to certify the wrapper checkout' >&2; exit 1; }

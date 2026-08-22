@@ -2,7 +2,9 @@ name: opto-sync shared chaos
 
 on:
   pull_request:
-    paths: ['tests/opto-sync-wrapper/**', '.github/workflows/opto-sync-shared-chaos.yml']
+    paths:
+      - tests/opto-sync-wrapper/**
+      - .github/workflows/opto-sync-shared-chaos.yml
   workflow_dispatch:
     inputs:
       live_e2e:
@@ -19,8 +21,57 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: opto-sync-shared-chaos-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out reviewed Quaestor fixture
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use Node.js 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Validate the credential-free downstream contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path('tests/opto-sync-wrapper')
+          profile = json.loads((root / 'profile.json').read_text(encoding='utf-8'))
+          assert profile['schemaVersion'] == 1
+          assert profile['repository'] == os.environ['GITHUB_REPOSITORY']
+          assert profile['syncRepository'].endswith('-sync')
+          assert profile['syncRef'].startswith('agent/den-')
+          assert isinstance(profile['syncPullRequest'], int) and profile['syncPullRequest'] > 0
+          assert profile['dependency'] == {
+              'package': 'opto-sync/opto-sync-clients',
+              'range': '^0.2.0',
+          }
+          assert profile['collections']
+          assert len(profile['collections']) == len(set(profile['collections']))
+          assert {'queuedOptimistic', 'remoteConfirmed'} <= set(profile['writeStrategies'])
+          assert {'postgres', 'supabase'} <= set(profile['persistence']['backend'])
+          assert profile['domainGuards']
+          PY
+          node --check tests/opto-sync-wrapper/product.e2e.test.mjs
+
   chaos:
+    # The reusable workflow receives a private cross-repository token, so it may
+    # only execute for a trusted manual dispatch. Pull requests run `contract`
+    # above without private source or credentials.
+    if: github.event_name != 'pull_request'
+    needs: contract
     uses: opto-sync/opto-sync-e2e/.github/workflows/downstream-chaos-reusable.yml@a577f040b90bb2f6dbcbec5a02cfb6a82a411356
     with:
       profile_path: tests/opto-sync-wrapper/profile.json

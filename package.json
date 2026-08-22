@@ -5,7 +5,7 @@
   "description": "Cross-driver end-to-end tests for Quaestor Ledger web surfaces, running one shared scenario set across Playwright, Puppeteer, and Selenium.",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "test": "node --test --test-concurrency=1 tests/contract.test.mjs tests/browser/playwright/*.test.mjs tests/browser/puppeteer/*.test.mjs tests/browser/selenium/*.test.mjs",
@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "playwright": "1.56.0",
-    "puppeteer": "^24.22.3",
+    "puppeteer": "25.1.0",
     "selenium-webdriver": "^4.27.0"
   },
   "devDependencies": {
