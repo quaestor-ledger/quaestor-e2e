@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "playwright": "1.56.0",
-    "puppeteer": "25.16.0",
+    "puppeteer": "25.1.0",
     "selenium-webdriver": "^4.27.0"
   },
   "devDependencies": {
