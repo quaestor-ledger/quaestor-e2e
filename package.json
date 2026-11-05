@@ -8,8 +8,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "test": "node --test --test-concurrency=1 tests/contract.test.mjs tests/browser/playwright/*.test.mjs tests/browser/puppeteer/*.test.mjs tests/browser/selenium/*.test.mjs",
-    "test:contract": "node --test tests/contract.test.mjs tests/fixture-server.test.mjs",
+    "test": "node --test --test-concurrency=1 tests/contract.test.mjs tests/fixture-server.test.mjs tests/ledger-http-roundtrip.test.mjs tests/browser/playwright/*.test.mjs tests/browser/puppeteer/*.test.mjs tests/browser/selenium/*.test.mjs",
+    "test:contract": "node --test tests/contract.test.mjs tests/fixture-server.test.mjs tests/ledger-http-roundtrip.test.mjs",
     "test:browser": "node --test --test-concurrency=1 tests/browser/playwright/*.test.mjs tests/browser/puppeteer/*.test.mjs tests/browser/selenium/*.test.mjs",
     "test:playwright": "node --test tests/browser/playwright/*.test.mjs",
     "test:puppeteer": "node --test tests/browser/puppeteer/*.test.mjs",
