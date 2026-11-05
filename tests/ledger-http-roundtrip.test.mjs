@@ -1,5 +1,4 @@
-// Real HTTP coverage for the bundled ledger fixture. This validates the wire
-// response and exact-cent journal invariants without requiring a browser grid.
+// Real loopback HTTP coverage for the bundled Quaestor ledger fixture.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startFixtureServer } from '../src/fixture-server.mjs';
@@ -7,16 +6,16 @@ import { startFixtureServer } from '../src/fixture-server.mjs';
 function cents(value) {
   const normalized = value.trim();
   if (normalized === '—') return 0;
-  assert.match(normalized, /^\\d{1,3}(?:,\\d{3})*\\.\\d{2}$/);
+  assert.match(normalized, /^\d{1,3}(?:,\d{3})*\.\d{2}$/);
   const [whole, fractional] = normalized.replaceAll(',', '').split('.');
   return Number(whole) * 100 + Number(fractional);
 }
 
 function entriesFromHtml(html) {
-  const body = html.match(/<tbody>([\\s\\S]*?)<\\/tbody>/i)?.[1];
+  const body = html.match(/<tbody>([\s\S]*?)<\/tbody>/i)?.[1];
   assert.ok(body, 'ledger response must contain a table body');
-  return [...body.matchAll(/<tr>([\\s\\S]*?)<\\/tr>/gi)].map((row) => {
-    const cells = [...row[1].matchAll(/<td(?:\\s+[^>]*)?>([\\s\\S]*?)<\\/td>/gi)]
+  return [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/gi)].map((row) => {
+    const cells = [...row[1].matchAll(/<td(?:\s+[^>]*)?>([\s\S]*?)<\/td>/gi)]
       .map((cell) => cell[1].trim());
     assert.equal(cells.length, 4, 'each journal row must expose entry, account, debit and credit');
     return { entry: cells[0], account: cells[1], debit: cents(cells[2]), credit: cents(cells[3]) };
@@ -30,7 +29,7 @@ test('ledger GET serves balanced journal entries over real loopback HTTP', { tim
     signal: AbortSignal.timeout(3_000),
   });
   assert.equal(response.status, 200);
-  assert.match(response.headers.get('content-type') ?? '', /^text\\/html/i);
+  assert.match(response.headers.get('content-type') ?? '', /^text\/html/i);
   const entries = entriesFromHtml(await response.text());
   assert.equal(entries.length, 4);
   const byEntry = new Map();
@@ -45,9 +44,9 @@ test('ledger GET serves balanced journal entries over real loopback HTTP', { tim
   }
   assert.equal(byEntry.size, 2);
   for (const [entry, totals] of byEntry) {
-    assert.equal(totals.rows, 2, `${entry}: expected both sides of the entry`);
-    assert.ok(totals.debit > 0, `${entry}: expected a nonzero posting`);
-    assert.equal(totals.debit, totals.credit, `${entry}: unbalanced journal entry`);
+    assert.equal(totals.rows, 2, entry + ': expected both sides of the entry');
+    assert.ok(totals.debit > 0, entry + ': expected a nonzero posting');
+    assert.equal(totals.debit, totals.credit, entry + ': unbalanced journal entry');
   }
   assert.equal(entries.reduce((sum, row) => sum + row.debit, 0), 125_000);
 });
