@@ -510,4 +510,64 @@ export const scenarios = [
       }
     },
   },
+
+  // ── Ledger accounting journeys (fixture UI, all three real browser drivers) ──
+  {
+    name: 'the ledger table balances every entry across debits and credits',
+    async applicable(driver, { baseURL }) {
+      await driver.goto(baseURL);
+      return (await driver.count('[data-testid="nav-ledger"]')) > 0;
+    },
+    async check(driver, { baseURL }) {
+      await driver.goto(new URL('ledger.html', baseURL).href);
+      const rows = await driver.evaluate(`Array.from(
+        document.querySelectorAll('[data-testid="entries"] tbody tr'),
+        row => Array.from(row.querySelectorAll('td'), cell => cell.textContent.trim())
+      )`);
+      assert.ok(rows.length >= 4, 'the fixture must exercise at least two balanced journal entries');
+      const totals = new Map();
+      for (const cells of rows) {
+        assert.equal(cells.length, 4, 'each journal row has entry, account, debit, credit');
+        const amount = (value) => /[0-9]/.test(value)
+          ? Number(value.replace(/,/g, '')) : 0;
+        const debit = amount(cells[2]);
+        const credit = amount(cells[3]);
+        assert.ok(Number.isFinite(debit) && Number.isFinite(credit));
+        assert.ok(debit >= 0 && credit >= 0);
+        assert.notEqual(debit > 0, credit > 0,
+          `one and only one side must be populated for ${cells[0]} / ${cells[1]}`);
+        const current = totals.get(cells[0]) ?? { debit: 0, credit: 0, rows: 0 };
+        current.debit += Math.round(debit * 100);
+        current.credit += Math.round(credit * 100);
+        current.rows += 1;
+        totals.set(cells[0], current);
+      }
+      assert.ok(totals.size >= 2, 'test multiple distinct journal entries');
+      for (const [entry, value] of totals) {
+        assert.ok(value.rows >= 2, `entry ${entry} must have opposing journal legs`);
+        assert.equal(value.debit, value.credit,
+          `entry ${entry} has unbalanced journal amounts in cents`);
+      }
+    },
+  },
+  {
+    name: 'keyboard navigation reaches the ledger through its real link',
+    async applicable(driver, { baseURL }) {
+      await driver.goto(baseURL);
+      return (await driver.count('[data-testid="nav-ledger"]')) > 0;
+    },
+    async check(driver, { baseURL }) {
+      await driver.goto(baseURL);
+      const focused = await driver.evaluate(`(() => {
+        const link = document.querySelector('[data-testid="nav-ledger"]');
+        link.focus();
+        return document.activeElement === link;
+      })()`);
+      assert.equal(focused, true, 'the ledger link must be keyboard-focusable');
+      await driver.press('[data-testid="nav-ledger"]', 'Enter');
+      assert.match(await driver.text('h1'), /ledger/i);
+      const pathname = await driver.evaluate('location.pathname');
+      assert.match(String(pathname), /\/ledger\.html$/i);
+    },
+  },
 ];
