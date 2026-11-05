@@ -41,7 +41,7 @@ export async function startFixtureServer({
       // fixture root, including via a sibling directory sharing its prefix.
       const rawPath = (request.url ?? '/').split(/[?#]/, 1)[0];
       const pathname = decodeURIComponent(rawPath);
-      if (pathname.includes('\\0')) {
+      if (pathname.includes('\0')) {
         response.writeHead(400).end('Bad request');
         return;
       }
