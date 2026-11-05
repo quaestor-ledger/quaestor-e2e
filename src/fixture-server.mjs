@@ -31,23 +31,41 @@ export async function startFixtureServer({
   port = 0,
 } = {}) {
   const server = createServer(async (request, response) => {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      response.writeHead(405, { allow: 'GET, HEAD' }).end('Method not allowed');
+      return;
+    }
     try {
-      const requestUrl = new URL(request.url, 'http://placeholder');
-      let pathname = decodeURIComponent(requestUrl.pathname);
-      if (pathname.endsWith('/')) {
-        pathname += 'index.html';
+      // Inspect the raw path *before* WHATWG URL parsing normalizes dot segments.
+      // A percent-encoded slash must not allow an HTTP client to escape the
+      // fixture root, including via a sibling directory sharing its prefix.
+      const rawPath = (request.url ?? '/').split(/[?#]/, 1)[0];
+      const pathname = decodeURIComponent(rawPath);
+      if (pathname.includes('\0')) {
+        response.writeHead(400).end('Bad request');
+        return;
       }
-      // Resolve within siteDir and reject path traversal.
-      const resolved = path.join(siteDir, path.normalize(pathname));
-      if (!resolved.startsWith(siteDir)) {
+      if (pathname.split(/[\\/]+/).includes('..')) {
+        response.writeHead(403).end('Forbidden');
+        return;
+      }
+      const relativePath = pathname.endsWith('/') ? pathname + 'index.html' : pathname;
+      const resolved = path.resolve(siteDir, '.' + relativePath);
+      const relative = path.relative(siteDir, resolved);
+      if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
         response.writeHead(403).end('Forbidden');
         return;
       }
       const body = await readFile(resolved);
       const type = CONTENT_TYPES[path.extname(resolved)] || 'application/octet-stream';
-      response.writeHead(200, { 'content-type': type }).end(body);
+      response.writeHead(200, { 'content-type': type, 'x-content-type-options': 'nosniff' })
+        .end(request.method === 'HEAD' ? undefined : body);
     } catch (error) {
-      if (error && error.code === 'ENOENT') {
+      if (error instanceof URIError) {
+        response.writeHead(400, { 'content-type': 'text/plain' }).end('Bad request');
+        return;
+      }
+      if (error && (error.code === 'ENOENT' || error.code === 'EISDIR')) {
         response.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
         return;
       }
