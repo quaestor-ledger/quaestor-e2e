@@ -24,7 +24,7 @@ async function fragmentedGet(baseURL, path) {
       // Deliberately split an HTTP request across TCP packets. The test uses
       // the actual Node HTTP parser/listener rather than calling the route directly.
       socket.write('GET ' + path + ' HTTP/1.1\r\nHost: ');
-      setImmediate(() => socket.end('fixture.local\r\nConnection: close\r\n\r\n'));
+      setImmediate(() => socket.write('fixture.local\r\nConnection: close\r\n\r\n'));
     });
   });
 }
