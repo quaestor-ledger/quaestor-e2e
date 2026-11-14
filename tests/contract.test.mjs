@@ -2,7 +2,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { resolveTarget } from '../src/harness.mjs';
+import { resolveNavigationTimeoutMs } from '../src/config.mjs';
 import { ORG_URL, PRODUCT_NAME, MIN_FEATURE_CARDS } from '../scenarios/index.mjs';
+
+test('E2E navigation timeout configuration is bounded and decimal-only', () => {
+  assert.equal(resolveNavigationTimeoutMs(undefined), 30_000);
+  assert.equal(resolveNavigationTimeoutMs(''), 30_000);
+  assert.equal(resolveNavigationTimeoutMs(' 1200 '), 1200);
+  assert.equal(resolveNavigationTimeoutMs('100'), 100);
+  assert.equal(resolveNavigationTimeoutMs('300000'), 300000);
+  for (const raw of ['0', '-1', '99', '300001', 'NaN', 'Infinity', '1e3', '0x1000', '1.25', '99999999999999999']) {
+    assert.throws(() => resolveNavigationTimeoutMs(raw), RangeError, String(raw));
+  }
+});
 
 function attributeValues(html, attribute) {
   const values = [];
