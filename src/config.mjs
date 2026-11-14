@@ -13,7 +13,21 @@ export const seleniumBrowserHost = process.env.SELENIUM_BROWSER_HOST?.trim() || 
 
 export const headed = truthy(process.env.E2E_HEADED);
 
-export const navigationTimeoutMs = Number(process.env.E2E_NAV_TIMEOUT_MS || 30_000);
+/** Strict bounded decimal milliseconds: prevent NaN, negative, or huge CI waits. */
+export function resolveNavigationTimeoutMs(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return 30_000;
+  const encoded = String(raw).trim();
+  if (!/^[1-9][0-9]*$/.test(encoded)) {
+    throw new RangeError('E2E_NAV_TIMEOUT_MS must be a positive decimal integer');
+  }
+  const timeout = Number(encoded);
+  if (!Number.isSafeInteger(timeout) || timeout < 100 || timeout > 300_000) {
+    throw new RangeError('E2E_NAV_TIMEOUT_MS must be within 100..300000 ms');
+  }
+  return timeout;
+}
+
+export const navigationTimeoutMs = resolveNavigationTimeoutMs(process.env.E2E_NAV_TIMEOUT_MS);
 
 /**
  * A localhost Grid (Docker/k8s) cannot resolve the host's own `localhost`, so
