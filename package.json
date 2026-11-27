@@ -21,7 +21,8 @@
     "selenium:up": "docker compose -f docker-compose.selenium.yml up -d --wait",
     "selenium:down": "docker compose -f docker-compose.selenium.yml down",
     "selenium:cluster": "bash scripts/cluster-selenium.sh",
-    "postinstall": "playwright install chromium firefox webkit || true"
+    "postinstall": "playwright install chromium firefox webkit || true",
+    "test:live-api": "node --test --test-timeout=60000 tests/live-api-boundary.test.mjs"
   },
   "dependencies": {
     "playwright": "1.56.0",
